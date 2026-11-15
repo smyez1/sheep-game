@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Sheep 🐑 Dice Game</title>
+<meta name="description" content="Sheep — a two-dice push-your-luck game (MATH project).">
+<style>
+  :root{
+    --bg:#f4f1ea; --card:#fffdf8; --ink:#2b2a27; --muted:#7a766d; --line:#e2ddd2;
+    --accent:#3d7a5a; --accent-ink:#fff; --warn:#c0532f; --gold:#c9962b; --hl:#eaf3ed;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#1c1b19; --card:#262522; --ink:#ece8df; --muted:#a19c90; --line:#3a3833;
+      --accent:#5fa57f; --accent-ink:#0f1a14; --warn:#e07a55; --gold:#e0b04a; --hl:#2c3a31; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;}
+  .wrap{max-width:720px;margin:0 auto;padding:16px 14px 40px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+  h1{font-size:1.5rem;margin:0;letter-spacing:.5px}
+  h2{font-size:1.1rem;margin:0 0 10px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+  button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px}
+  button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+  button.danger{background:var(--warn);border-color:var(--warn);color:#fff;font-weight:600}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.small{padding:4px 10px;font-size:.85rem}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  label{font-size:.9rem;color:var(--muted)}
+  input,select{font:inherit;padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+  input[type=number]{width:90px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .seg button{border:0;border-radius:0;padding:7px 12px}
+  .seg button.on{background:var(--accent);color:var(--accent-ink)}
+  .field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+  .plist .prow{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .plist .prow input{flex:1;min-width:0}
+  /* scoreboard */
+  .board{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+  .pl{border:1px solid var(--line);border-radius:12px;padding:10px;position:relative;transition:.2s}
+  .pl.cur{border-color:var(--accent);background:var(--hl);box-shadow:0 0 0 2px var(--accent) inset}
+  .pl .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pl .sc{font-size:1.8rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .pl .tag{font-size:.75rem;color:var(--muted)}
+  .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:4px}
+  .bar i{display:block;height:100%;background:var(--accent);transition:width .3s}
+  /* dice */
+  .table{text-align:center}
+  .dice{display:flex;justify-content:center;gap:18px;margin:10px 0 6px;min-height:84px}
+  .die{width:78px;height:78px;border-radius:14px;background:#fff;border:2px solid #d8d2c4;display:grid;
+       grid-template:repeat(3,1fr)/repeat(3,1fr);padding:10px;box-shadow:0 3px 0 #d8d2c4}
+  .die.six{background:#fde9e2;border-color:var(--warn);box-shadow:0 3px 0 var(--warn)}
+  .die.rolling{animation:shake .35s}
+  @keyframes shake{0%{transform:rotate(0)}25%{transform:rotate(-14deg) scale(.92)}50%{transform:rotate(12deg)}75%{transform:rotate(-6deg)}100%{transform:rotate(0)}}
+  .pip{width:13px;height:13px;border-radius:50%;background:#222;align-self:center;justify-self:center;visibility:hidden}
+  .pip.on{visibility:visible}
+  .die.six .pip{background:var(--warn)}
+  .tt{font-size:1rem;color:var(--muted)}
+  .tt b{font-size:2.2rem;color:var(--ink);font-variant-numeric:tabular-nums}
+  .msg{min-height:1.6em;font-weight:600;margin:4px 0 10px}
+  .msg.bad{color:var(--warn)} .msg.good{color:var(--accent)}
+  .actions{display:flex;gap:12px;justify-content:center}
+  .actions button{font-size:1.15rem;padding:12px 0;width:42%;max-width:200px}
+  .hint{margin-top:12px;font-size:.88rem;color:var(--muted)}
+  .hint b{color:var(--ink)}
+  .log{max-height:180px;overflow:auto;font-size:.85rem;color:var(--muted);margin:0;padding-left:18px}
+  .log li{margin:2px 0}
+  .win{text-align:center}
+  .win .big{font-size:2rem;font-weight:700;color:var(--gold);margin:6px 0}
+  details summary{cursor:pointer;font-weight:600}
+  .rules p,.rules li{font-size:.92rem}
+  .muted{color:var(--muted);font-size:.85rem}
+  .hidden{display:none !important}
+  footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🐑 Sheep</h1>
+    <div class="row">
+      <button class="small" id="langBtn">EN</button>
+      <button class="small hidden" id="quitBtn"></button>
+    </div>
+  </header>
+
+  <!-- ============ SETUP ============ -->
+  <section id="setup">
+    <div class="card">
+      <h2 data-t="setupTitle"></h2>
+      <div class="field">
+        <label data-t="modeLabel"></label>
+        <div class="seg" id="modeSeg"><button data-v="cpu"></button><button data-v="pvp"></button></div>
+      </div>
+      <div class="field">
+        <label data-t="namesLabel"></label>
+        <div class="plist">
+          <div class="prow">🙂 <input id="name1" maxlength="16"></div>
+          <div class="prow"><span id="p2icon">🤖</span> <input id="name2" maxlength="16"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="hintChk" checked> <span data-t="showHint"></span></label>
+      </div>
+      <button class="primary" id="startBtn" style="width:100%;padding:12px" data-t="start"></button>
+    </div>
+    <div class="card rules">
+      <details open>
+        <summary data-t="rulesTitle"></summary>
+        <div id="rulesBody"></div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ============ GAME ============ -->
+  <section id="game" class="hidden">
+    <div class="card"><div class="muted" id="roundInfo" style="margin-bottom:8px"></div><div class="board" id="board"></div></div>
+
+    <div class="card table" id="tableCard">
+      <div id="curName" style="font-weight:600"></div>
+      <div class="dice" id="dice"></div>
+      <div class="tt"><span data-t="turnTotal"></span> <b id="turnTotal">0</b></div>
+      <div class="msg" id="msg"></div>
+      <div class="actions">
+        <button class="primary" id="rollBtn" data-t="roll"></button>
+        <button id="holdBtn" data-t="hold"></button>
+      </div>
+      <div class="hint" id="hint"></div>
+    </div>
+
+    <div class="card win hidden" id="winCard">
+      <div data-t="gameOver"></div>
+      <div class="big" id="winText"></div>
+      <div class="muted" id="finalScores"></div>
+      <div class="row" style="justify-content:center;margin-top:12px">
+        <button class="primary" id="againBtn" data-t="again"></button>
+        <button id="setupBtn" data-t="backSetup"></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 data-t="logTitle"></h2>
+      <ol class="log" id="log"></ol>
+    </div>
+  </section>
+
+  <footer>Sheep · MATH group project · <span data-t="footer"></span></footer>
+</div>
+
+<script>
+/* ===================== i18n ===================== */
+const TXT = {
+  zh:{
+    setupTitle:"游戏设置", modeLabel:"对战模式", cpu:"🤖 人机对战", pvp:"👥 双人对战",
+    namesLabel:"玩家名字（可不填）", p1:"玩家 1", p2:"玩家 2", cpuName:"电脑",
+    showHint:"显示策略提示", start:"开始游戏",
+    rulesTitle:"游戏规则", turnTotal:"本回合累计", roll:"🎲 掷骰", hold:"✋ 停手",
+    gameOver:"游戏结束", again:"再来一局", backSetup:"返回设置", logTitle:"记录", quit:"退出",
+    footer:"手机扫码即可游玩",
+    round:r=>`第 ${r} 轮 · 先到 100 分获胜`,
+    turnOf:n=>`轮到 ${n}`, thinking:"（思考中…）",
+    rolled:(n,d)=>`${n} 掷出 ${d}`,
+    oneSix:"出现一个 6！本回合得分清零。", doubleSix:"双 6！本回合清零，总分也清零！",
+    added:v=>`+${v}`, held:(n,v,s)=>`${n} 停手，获得 ${v} 分（总分 ${s}）`,
+    bustLog:n=>`${n} 掷出一个 6，本回合 0 分`, dblLog:n=>`${n} 掷出双 6，总分归零！`,
+    wins:n=>`🏆 ${n} 获胜！`,
+    hintRoll:"建议：<b>继续掷</b>", hintHold:"建议：<b>停手</b>",
+    hintWhy:(t,s,g)=>`再掷一次的期望增益 = (150 − 11×本回合 − 总分)/36 = (150 − 11×${t} − ${s})/36 = <b>${g}</b>`,
+    hintReach:"停手就能达到 100 分，直接获胜！",
+    rules:`<p>两名玩家轮流进行。每个回合，玩家反复掷两颗骰子，直到出现以下情况之一：</p>
+      <ul><li><b>恰好一颗是 6</b>：本回合得分为 0，回合结束。</li>
+      <li><b>两颗都是 6</b>：本回合得分为 0，并且<b>总分清零</b>，回合结束。</li>
+      <li><b>没有 6</b>：点数之和加入本回合累计，玩家可选择继续掷或“停手”。</li>
+      <li><b>停手</b>：本回合累计加入总分，回合结束。</li></ul>
+      <p>最先达到 <b>100 分或以上</b>的玩家获胜。</p>
+      <p class="muted">电脑的策略：只要再掷一次的期望增益为正就继续掷，否则停手。</p>`
+  },
+  en:{
+    setupTitle:"Game setup", modeLabel:"Mode", cpu:"🤖 vs Computer", pvp:"👥 2 Players",
+    namesLabel:"Player names (optional)", p1:"Player 1", p2:"Player 2", cpuName:"Computer",
+    showHint:"Show strategy hint", start:"Start game",
+    rulesTitle:"Rules", turnTotal:"Turn total", roll:"🎲 Roll", hold:"✋ Hold",
+    gameOver:"Game over", again:"Play again", backSetup:"Back to setup", logTitle:"Log", quit:"Quit",
+    footer:"scan the QR code to play on your phone",
+    round:r=>`Round ${r} · first to 100 wins`,
+    turnOf:n=>`${n}'s turn`, thinking:" (thinking…)",
+    rolled:(n,d)=>`${n} rolled ${d}`,
+    oneSix:"One 6! Turn total lost.", doubleSix:"Double 6! Turn total AND total score lost!",
+    added:v=>`+${v}`, held:(n,v,s)=>`${n} holds for ${v} (total ${s})`,
+    bustLog:n=>`${n} rolled a 6 — 0 this turn`, dblLog:n=>`${n} rolled double 6 — score reset to 0!`,
+    wins:n=>`🏆 ${n} wins!`,
+    hintRoll:"Suggestion: <b>roll again</b>", hintHold:"Suggestion: <b>hold</b>",
+    hintWhy:(t,s,g)=>`Expected gain of one more throw = (150 − 11·turn − score)/36 = (150 − 11·${t} − ${s})/36 = <b>${g}</b>`,
+    hintReach:"Holding reaches 100 — you win!",
+    rules:`<p>Two players take turns. On each turn a player repeatedly throws two dice until:</p>
+      <ul><li><b>Exactly one 6</b>: the turn scores nothing and ends.</li>
+      <li><b>Double 6</b>: the turn scores nothing and the player <b>loses their total score</b>.</li>
+      <li><b>No 6</b>: the sum is added to the turn total and the player may roll again or “hold”.</li>
+      <li><b>Hold</b>: the turn total is added to the score and the turn ends.</li></ul>
+      <p>The first player to reach <b>100 or more</b> wins.</p>
+      <p class="muted">Computer strategy: roll while the expected gain of one more throw is positive, otherwise hold.</p>`
+  }
+};
+const TARGET = 100;
+let lang = (navigator.language||"zh").toLowerCase().startsWith("zh") ? "zh" : "en";
+try{ const s = localStorage.getItem("sheepLang"); if(s) lang = s; }catch(e){}
+const t = (k,...a)=>{ const v = TXT[lang][k]; return typeof v==="function" ? v(...a) : v; };
+const $ = id => document.getElementById(id);
+
+/* ===================== setup ===================== */
+const cfg = { vsCpu:true };
+function applyText(){
+  document.querySelectorAll("[data-t]").forEach(el=>{ el.textContent = t(el.dataset.t); });
+  $("langBtn").textContent = lang==="zh" ? "EN" : "中文";
+  $("quitBtn").textContent = t("quit");
+}
+function renderSetup(){
+  applyText();
+  $("rulesBody").innerHTML = t("rules");
+  [...$("modeSeg").children].forEach(b=>{ b.textContent=t(b.dataset.v); b.classList.toggle("on", (b.dataset.v==="cpu")===cfg.vsCpu); });
+  $("name1").placeholder = t("p1");
+  $("name2").placeholder = cfg.vsCpu ? t("cpuName") : t("p2");
+  $("p2icon").textContent = cfg.vsCpu ? "🤖" : "🙂";
+}
+[...$("modeSeg").children].forEach(b=>b.onclick=()=>{ cfg.vsCpu = b.dataset.v==="cpu"; renderSetup(); });
+$("langBtn").onclick=()=>{ lang = lang==="zh"?"en":"zh"; try{localStorage.setItem("sheepLang",lang);}catch(e){}
+  renderSetup(); if(G) renderGame(); };
+
+/* ===================== game ===================== */
+let G = null, aiTimer = null;
+
+function startGame(){
+  clearTimeout(aiTimer);
+  const n1 = $("name1").value.trim() || t("p1");
+  const n2 = $("name2").value.trim() || (cfg.vsCpu ? t("cpuName") : t("p2"));
+  G = { players:[{name:n1,ai:false,score:0},{name:n2,ai:cfg.vsCpu,score:0}],
+        hint:$("hintChk").checked, cur:0, round:1, turnTotal:0, last:null,
+        msg:"", msgCls:"", busy:false, over:false, winner:-1, log:[] };
+  $("setup").classList.add("hidden"); $("game").classList.remove("hidden"); $("quitBtn").classList.remove("hidden");
+  renderGame(); scheduleAI();
+}
+function addLog(s){ G.log.unshift(s); if(G.log.length>200) G.log.pop(); }
+const rollDie = ()=> 1 + Math.floor(Math.random()*6);
+
+function doRoll(){
+  if(!G || G.over || G.busy) return;
+  const p = G.players[G.cur];
+  const d = [rollDie(), rollDie()];
+  G.last = d;
+  const sixes = d.filter(x=>x===6).length;
+  addLog(t("rolled", p.name, d.join(" + ")));
+  if(sixes===2){
+    G.turnTotal = 0; p.score = 0; G.msg = t("doubleSix"); G.msgCls="bad"; addLog(t("dblLog",p.name)); bust();
+  } else if(sixes===1){
+    G.turnTotal = 0; G.msg = t("oneSix"); G.msgCls="bad"; addLog(t("bustLog",p.name)); bust();
+  } else {
+    G.turnTotal += d[0]+d[1]; G.msg = t("added", d[0]+d[1]); G.msgCls="good";
+    renderGame(true); scheduleAI();
+  }
+}
+function bust(){
+  G.busy = true; renderGame(true);
+  const g = G;   // ignore if the game was quit/restarted during the pause
+  setTimeout(()=>{ if(G!==g || g.over) return; G.busy=false; nextPlayer(); }, 1400);
+}
+function doHold(){
+  if(!G || G.over || G.busy || G.turnTotal===0) return;
+  const p = G.players[G.cur];
+  p.score += G.turnTotal;
+  addLog(t("held", p.name, G.turnTotal, p.score));
+  if(p.score >= TARGET){ G.turnTotal=0; G.over=true; G.winner=G.cur; clearTimeout(aiTimer); addLog(t("wins",p.name)); renderGame(); return; }
+  nextPlayer();
+}
+function nextPlayer(){
+  G.turnTotal = 0; G.last = null; G.msg=""; G.msgCls="";
+  G.cur = 1 - G.cur;
+  if(G.cur===0) G.round++;
+  renderGame(); scheduleAI();
+}
+
+/* ===================== strategy =====================
+   One more throw of two dice, with turn total t and banked score S:
+     P(no 6) = 25/36, E[sum | no 6] = 6   → expected gain 150/36
+     P(one 6) = 10/36                      → lose t
+     P(double 6) = 1/36                    → lose t + S
+   E[gain] = (150 − 11t − S)/36  → roll while positive.
+   Override: hold if holding reaches the target. */
+function advice(){
+  const p = G.players[G.cur], tt = G.turnTotal, S = p.score;
+  if(tt>0 && S+tt >= TARGET) return {roll:false, why:t("hintReach")};
+  const g = (150-11*tt-S)/36;
+  return {roll: tt===0 || g>0, why:t("hintWhy",tt,S,g.toFixed(2))};
+}
+function scheduleAI(){
+  clearTimeout(aiTimer);
+  if(!G || G.over || !G.players[G.cur].ai) return;
+  aiTimer = setTimeout(()=>{
+    if(!G || G.over || G.busy || !G.players[G.cur].ai) return;
+    advice().roll ? doRoll() : doHold();
+  }, 750);
+}
+
+/* ===================== rendering ===================== */
+const PIPS = {1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+function dieHTML(v, anim){
+  const on = PIPS[v]||[];
+  return `<div class="die ${v===6?'six':''} ${anim?'rolling':''}">${
+    Array.from({length:9},(_,i)=>`<span class="pip ${on.includes(i)?'on':''}"></span>`).join("")}</div>`;
+}
+function renderGame(anim){
+  if(!G) return;
+  applyText();
+  $("roundInfo").textContent = t("round", G.round);
+  $("board").innerHTML = G.players.map((p,i)=>`
+    <div class="pl ${i===G.cur&&!G.over?'cur':''}">
+      <div class="nm">${p.ai?'🤖':'🙂'} ${esc(p.name)}</div>
+      <div class="sc">${p.score}${i===G.cur&&G.turnTotal&&!G.over?`<span class="tag"> +${G.turnTotal}</span>`:''}</div>
+      <div class="bar"><i style="width:${Math.min(100,p.score)}%"></i></div>
+    </div>`).join("");
+  const p = G.players[G.cur];
+  $("tableCard").classList.toggle("hidden", G.over);
+  $("winCard").classList.toggle("hidden", !G.over);
+  if(G.over){
+    $("winText").textContent = t("wins", G.players[G.winner].name);
+    $("finalScores").textContent = G.players.map(q=>`${q.name}: ${q.score}`).join(" · ");
+  } else {
+    $("curName").textContent = t("turnOf", p.name) + (p.ai ? t("thinking") : "");
+    $("dice").innerHTML = (G.last || [0,0]).map(v=> v ? dieHTML(v, anim) : `<div class="die" style="opacity:.35"></div>`).join("");
+    $("turnTotal").textContent = G.turnTotal;
+    $("msg").textContent = G.msg; $("msg").className = "msg " + G.msgCls;
+    const human = !p.ai;
+    $("rollBtn").disabled = !human || G.busy;
+    $("holdBtn").disabled = !human || G.busy || G.turnTotal===0;
+    if(G.hint && human && !G.busy){
+      const a = advice();
+      $("hint").innerHTML = (a.roll ? t("hintRoll") : t("hintHold")) + "<br>" + a.why;
+    } else $("hint").innerHTML = "";
+  }
+  $("log").innerHTML = G.log.map(s=>`<li>${esc(s)}</li>`).join("");
+}
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+$("startBtn").onclick = startGame;
+$("rollBtn").onclick = doRoll;
+$("holdBtn").onclick = doHold;
+$("againBtn").onclick = startGame;
+function toSetup(){ clearTimeout(aiTimer); G=null; $("game").classList.add("hidden"); $("setup").classList.remove("hidden"); $("quitBtn").classList.add("hidden"); renderSetup(); }
+$("setupBtn").onclick = toSetup;
+$("quitBtn").onclick = toSetup;
+document.addEventListener("keydown", e=>{
+  if(!G || G.over || e.target.tagName==="INPUT" || G.players[G.cur].ai) return;
+  if(e.key===" "||e.key==="r"){ e.preventDefault(); doRoll(); }
+  if(e.key==="h"||e.key==="Enter"){ doHold(); }
+});
+renderSetup();
+</script>
+</body>
+</html>
