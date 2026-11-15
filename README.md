@@ -16,8 +16,8 @@ Two players take turns. On each turn a player keeps throwing two dice until one 
 |---|---|
 | Exactly one 6 | The turn scores nothing and ends |
 | Double 6 | The turn scores nothing **and the player's total score resets to 0** |
-| No 6 | The sum goes into the turn total, and the player may roll again or hold |
-| Hold | The turn total is added to the player's score |
+| No 6 | The sum of this throw becomes the turn score (it **replaces** the previous throw, so at most 10), and the player may roll again or hold |
+| Hold | The turn score is added to the player's total score |
 
 The first player to reach **100 or more** wins.
 
@@ -25,13 +25,23 @@ The first player to reach **100 or more** wins.
 
 - **vs Computer**: play against a computer opponent
 - **2 Players**: two people pass one phone between them
-- An optional strategy hint, a Chinese / English interface, and it works on phones
+- An optional strategy hint, and it works on phones
 
 ## Strategy used by the hint and the computer
 
-With turn total *t* and banked score *S*, one more throw of two dice changes the expected outcome by
+Let *v* be the current turn score (the latest throw) and *S* the banked score.
+Holding banks *v*. Rerolling gives a new value *w* with probability 25/36 (sum of two dice showing 1–5), 0 with probability 10/36, and 0 plus the loss of *S* with probability 1/36 (double 6).
+The expected gain *C* from rerolling and then playing on optimally satisfies
 
-E[gain] = (25/36)·6 − (10/36)·t − (1/36)·(t + S) = (150 − 11t − S)/36
+C = Σ_w P(w) · max(w, C) − S/36
 
-so the player should roll while 11t + S < 150 (for example, hold at t ≥ 14 when S = 0), and always hold if holding reaches 100.
+and the player should **hold iff v ≥ C**, unless holding already reaches 100, in which case always hold.
+
+| Banked score S | C | Hold when the throw is at least |
+|---|---|---|
+| 0 | 4.33 | 5 |
+| 20 | 3.70 | 4 |
+| 50 | 2.80 | 3 |
+| 80 | 1.94 | 2 (always hold) |
+
 This rule maximises the expected score per turn. It is a good heuristic, but not the exact win-probability-optimal policy.
